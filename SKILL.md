@@ -193,10 +193,11 @@ key interactively, so the key never appears in their shell history or the proces
 #      ./scripts/sign-auth.sh 1 56 100 (Ethereum + BSC + Gnosis)
 ```
 
-It prompts once for the key (input masked as `*` so the user sees their paste registered),
-then prints a clearly-delineated handoff banner and a labeled authorization signature per
-chain. The banner tells the user the output is safe to share and is **not** their private
-key — so they don't mistake it for a secret. The user pastes the signature(s) back. **Do not
+It prompts for the key at `cast`'s own hidden prompt (once per chain) — so the key is never
+put in argv, shell history, or the process list. Up front it explains that input is hidden
+(no characters appear, which is expected) and that each printed authorization signature is
+**safe to share and is not the private key**, with a reminder after each signature, so the
+user doesn't mistake the output for a secret. The user pastes the signature(s) back. **Do not
 ask the user for the private key, and do not give them a raw `cast` command with a `--rpc-url`
 they fill in** — that reintroduces the untrusted-RPC attack surface this script removes.
 

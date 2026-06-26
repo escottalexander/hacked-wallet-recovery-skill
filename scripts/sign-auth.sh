@@ -9,12 +9,11 @@
 # to share: it authorizes only the specific delegate contract, is bound to your
 # wallet's current nonce, and cannot be reused.
 #
-# Key handling: the key is entered at a masked prompt (shown as '*' so you get
-# feedback that your paste registered) and is read directly into a variable — it is
-# NOT written to your shell history and is never sent to the agent. It is passed to
-# `cast` via --private-key, which means it is briefly visible in this machine's
-# process list (`ps`) during signing. That is an accepted local-only trade for the
-# masked input + clear labeling; the key still never leaves your terminal.
+# Key handling: the key is entered at `cast`'s own interactive prompt (-i), which
+# reads it directly from the terminal. It is therefore NEVER passed as a command
+# argument — it does not appear in your shell history OR in this machine's process
+# list (`ps`), and it never reaches the agent. Input is hidden as you type (no
+# characters appear — this is expected). You are prompted once per chain.
 #
 # Usage:   ./sign-auth.sh <chainId> [<chainId> ...]
 # Example: ./sign-auth.sh 1            # Ethereum
@@ -55,26 +54,6 @@ declare -A CHAIN_NAME=(
   [57073]="Ink" [81457]="Blast" [747474]="Katana" [7777777]="Zora"
 )
 
-# Read a secret into the named variable, echoing '*' per character (with backspace
-# support) so the user gets visual feedback that their paste registered. All prompt
-# output goes to stderr; nothing is added to shell history.
-read_secret() {
-  local __prompt="$1" __dest="$2" __ch __val=""
-  printf '%s' "$__prompt" >&2
-  while IFS= read -rsn1 __ch; do
-    [[ -z "$__ch" ]] && break                       # Enter -> done
-    if [[ "$__ch" == $'\177' || "$__ch" == $'\b' ]]; then
-      if [[ -n "$__val" ]]; then __val="${__val%?}"; printf '\b \b' >&2; fi
-    else
-      __val+="$__ch"; printf '*' >&2
-    fi
-  done
-  printf '\n' >&2
-  __val="${__val#"${__val%%[![:space:]]*}"}"        # trim leading whitespace
-  __val="${__val%"${__val##*[![:space:]]}"}"        # trim trailing whitespace
-  printf -v "$__dest" '%s' "$__val"
-}
-
 command -v cast >/dev/null 2>&1 || {
   echo "error: Foundry's 'cast' not found." >&2
   echo "       install: curl -L https://foundry.paradigm.xyz | bash && foundryup" >&2
@@ -96,31 +75,21 @@ for id in "$@"; do
   fi
 done
 
-echo "Paste your COMPROMISED wallet's private key below, then press Enter." >&2
-echo "Input is masked (shown as *), is not saved to history, and never goes to the agent." >&2
-echo >&2
-
-PRIVATE_KEY=""
-read_secret "Private key: " PRIVATE_KEY
-[ -n "$PRIVATE_KEY" ] || { echo "error: no key entered" >&2; exit 1; }
-
-# Clear, delineated handoff message so the user does NOT mistake the output below
-# for something secret. Everything printed after this banner is shareable.
+# Up-front explanation so the user knows what to expect and does NOT mistake the
+# printed signature for a secret. All guidance goes to stderr; only signatures go
+# to stdout.
 {
-  echo
-  echo "════════════════════════════════════════════════════════════════════"
-  echo " ✅ Got it. Signing complete."
-  echo
-  echo " 👉 Now give the signature(s) below back to your agent."
-  echo "    These are SAFE to share — each is an authorization signature,"
-  echo "    NOT your private key, and contains no secret."
-  echo "════════════════════════════════════════════════════════════════════"
+  echo "You'll be asked to paste your COMPROMISED wallet's private key (once per chain)."
+  echo "  • Input is HIDDEN — no characters appear as you paste. That is expected, not an error."
+  echo "  • What gets printed afterward is an AUTHORIZATION SIGNATURE."
+  echo "  • Those signatures are SAFE to share — give them to your agent. They are NOT your key."
 } >&2
 
 for id in "$@"; do
   echo >&2
-  echo "── chain $id (${CHAIN_NAME[$id]}) — authorization signature ──" >&2
-  cast wallet sign-auth "$DELEGATE" --private-key "$PRIVATE_KEY" --rpc-url "${READ_RPC[$id]}"
+  echo "════════════════════ chain $id (${CHAIN_NAME[$id]}) ════════════════════" >&2
+  # -i / --interactive: cast prompts for the key on the terminal — never in argv,
+  # shell history, or the process list.
+  cast wallet sign-auth "$DELEGATE" --interactive --rpc-url "${READ_RPC[$id]}"
+  echo "↑ Authorization signature for chain $id — SAFE to share. Give this line to your agent." >&2
 done
-
-unset PRIVATE_KEY
