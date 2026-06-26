@@ -193,10 +193,12 @@ key interactively, so the key never appears in their shell history or the proces
 #      ./scripts/sign-auth.sh 1 56 100 (Ethereum + BSC + Gnosis)
 ```
 
-It prompts once per chain ("Paste compromised private key (hidden)") and prints a labeled
-authorization hex per chain. **Do not ask the user for the private key, and do not give them
-a raw `cast` command with a `--rpc-url` they fill in** — that reintroduces the untrusted-RPC
-attack surface this script removes.
+It prompts once for the key (input masked as `*` so the user sees their paste registered),
+then prints a clearly-delineated handoff banner and a labeled authorization signature per
+chain. The banner tells the user the output is safe to share and is **not** their private
+key — so they don't mistake it for a secret. The user pastes the signature(s) back. **Do not
+ask the user for the private key, and do not give them a raw `cast` command with a `--rpc-url`
+they fill in** — that reintroduces the untrusted-RPC attack surface this script removes.
 
 The output for each chain is a single hex string — the RLP-encoded authorization — e.g.:
 ```

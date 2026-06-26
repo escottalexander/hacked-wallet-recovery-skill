@@ -5,13 +5,16 @@
 # THE COMPROMISED PRIVATE KEY NEVER LEAVES THIS MACHINE.
 # Run this in your OWN terminal. It signs the EIP-7702 authorization for the
 # curated delegate using a hardcoded, vetted read RPC per chain, and prints ONLY
-# the authorization hex. Paste that hex back to the agent — it is safe to share:
-# it authorizes only the specific delegate contract, is bound to your wallet's
-# current nonce, and cannot be reused.
+# the authorization signature(s). Paste a signature back to the agent — it is safe
+# to share: it authorizes only the specific delegate contract, is bound to your
+# wallet's current nonce, and cannot be reused.
 #
-# The key is entered at an interactive prompt (cast -i), so it is NEVER passed as
-# a command-line argument — it does not appear in your shell history or in the
-# process list (`ps`). You will be prompted once per chain.
+# Key handling: the key is entered at a masked prompt (shown as '*' so you get
+# feedback that your paste registered) and is read directly into a variable — it is
+# NOT written to your shell history and is never sent to the agent. It is passed to
+# `cast` via --private-key, which means it is briefly visible in this machine's
+# process list (`ps`) during signing. That is an accepted local-only trade for the
+# masked input + clear labeling; the key still never leaves your terminal.
 #
 # Usage:   ./sign-auth.sh <chainId> [<chainId> ...]
 # Example: ./sign-auth.sh 1            # Ethereum
@@ -52,6 +55,26 @@ declare -A CHAIN_NAME=(
   [57073]="Ink" [81457]="Blast" [747474]="Katana" [7777777]="Zora"
 )
 
+# Read a secret into the named variable, echoing '*' per character (with backspace
+# support) so the user gets visual feedback that their paste registered. All prompt
+# output goes to stderr; nothing is added to shell history.
+read_secret() {
+  local __prompt="$1" __dest="$2" __ch __val=""
+  printf '%s' "$__prompt" >&2
+  while IFS= read -rsn1 __ch; do
+    [[ -z "$__ch" ]] && break                       # Enter -> done
+    if [[ "$__ch" == $'\177' || "$__ch" == $'\b' ]]; then
+      if [[ -n "$__val" ]]; then __val="${__val%?}"; printf '\b \b' >&2; fi
+    else
+      __val+="$__ch"; printf '*' >&2
+    fi
+  done
+  printf '\n' >&2
+  __val="${__val#"${__val%%[![:space:]]*}"}"        # trim leading whitespace
+  __val="${__val%"${__val##*[![:space:]]}"}"        # trim trailing whitespace
+  printf -v "$__dest" '%s' "$__val"
+}
+
 command -v cast >/dev/null 2>&1 || {
   echo "error: Foundry's 'cast' not found." >&2
   echo "       install: curl -L https://foundry.paradigm.xyz | bash && foundryup" >&2
@@ -73,13 +96,31 @@ for id in "$@"; do
   fi
 done
 
-echo "You will be prompted to paste the private key once per chain." >&2
-echo "Input is hidden and is never stored or passed on the command line." >&2
+echo "Paste your COMPROMISED wallet's private key below, then press Enter." >&2
+echo "Input is masked (shown as *), is not saved to history, and never goes to the agent." >&2
 echo >&2
 
-for id in "$@"; do
-  echo "== chain $id (${CHAIN_NAME[$id]}) =="
-  # -i / --interactive: cast prompts for the key on the TTY (no argv, no history).
-  cast wallet sign-auth "$DELEGATE" --interactive --rpc-url "${READ_RPC[$id]}"
+PRIVATE_KEY=""
+read_secret "Private key: " PRIVATE_KEY
+[ -n "$PRIVATE_KEY" ] || { echo "error: no key entered" >&2; exit 1; }
+
+# Clear, delineated handoff message so the user does NOT mistake the output below
+# for something secret. Everything printed after this banner is shareable.
+{
   echo
+  echo "════════════════════════════════════════════════════════════════════"
+  echo " ✅ Got it. Signing complete."
+  echo
+  echo " 👉 Now give the signature(s) below back to your agent."
+  echo "    These are SAFE to share — each is an authorization signature,"
+  echo "    NOT your private key, and contains no secret."
+  echo "════════════════════════════════════════════════════════════════════"
+} >&2
+
+for id in "$@"; do
+  echo >&2
+  echo "── chain $id (${CHAIN_NAME[$id]}) — authorization signature ──" >&2
+  cast wallet sign-auth "$DELEGATE" --private-key "$PRIVATE_KEY" --rpc-url "${READ_RPC[$id]}"
 done
+
+unset PRIVATE_KEY
