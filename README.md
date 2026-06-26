@@ -1,8 +1,9 @@
-# Hacked Wallet Recovery (Claude skill)
+# Hacked Wallet Recovery (agent skill)
 
-A [Claude Code](https://claude.com/claude-code) skill for rescuing assets from a
-**compromised Ethereum wallet** using [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702)
-delegation — without ever exposing the compromised private key.
+An **agent skill** for rescuing assets from a **compromised Ethereum wallet** using
+[EIP-7702](https://eips.ethereum.org/EIPS/eip-7702) delegation — without ever exposing the
+compromised private key. It follows the portable skill format, so it runs in any coding agent
+that supports skills (Claude Code, Codex, Gemini CLI, Copilot CLI, and others) — not just one.
 
 If an attacker has your private key, you can't safely send a normal transaction: the moment
 gas hits the wallet, a sweeper bot takes it. This skill coordinates a recovery where the
@@ -63,9 +64,10 @@ boundary, embedded in both the recovery script and the signer.
 
 ## Usage
 
-Install as a Claude Code skill and trigger it by describing the situation (e.g. "my wallet
-was hacked and I need to move my tokens out"). The agent walks through discovery, operator
-setup, gas funding, local signing, and broadcast. See `SKILL.md` for the full flow.
+Install it as a skill in your agent of choice and trigger it by describing the situation
+(e.g. "my wallet was hacked and I need to move my tokens out"). The agent walks through
+discovery, operator setup, gas funding, local signing, and broadcast. See `SKILL.md` for the
+full flow.
 
 ## Disclaimer
 
