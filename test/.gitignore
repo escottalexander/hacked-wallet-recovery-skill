@@ -1,0 +1,9 @@
+node_modules/
+package*.json
+recover.ts
+recover-template.ts
+operator-keystore/
+operator-password.txt
+anvil.log
+*.code
+accounts.env

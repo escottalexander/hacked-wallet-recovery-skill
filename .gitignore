@@ -1,0 +1,17 @@
+# Node
+node_modules/
+package.json
+package-lock.json
+
+# Recovery run artifacts — NEVER commit these (may contain keys / secrets)
+# (the canonical template lives at references/recover-template.ts and IS tracked;
+#  only the generated working file `recover.ts` and any local copies are ignored)
+/recover.ts
+recover.ts
+operator-keystore/
+operator-password.txt
+accounts.env
+
+# Test / tooling output
+*.code
+anvil.log
